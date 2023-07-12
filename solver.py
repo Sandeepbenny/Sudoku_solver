@@ -9,6 +9,7 @@ board = [
     [1,2,0,0,0,7,4,0,0],
     [0,4,9,2,0,6,0,0,7]
 ]
+
 def printboard(bo):
     #function to display the board in a readable format.
     for i in range(len(bo)):
