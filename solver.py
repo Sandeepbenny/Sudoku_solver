@@ -1,74 +1,198 @@
+import pygame
+import time
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (200, 200, 200)
+BLUE = (0, 0, 255)
+
+# Set up the display
+pygame.init()
+WIDTH = 540
+HEIGHT = 600
+FPS = 60
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Sudoku Solver")
+clock = pygame.time.Clock()
+
+# Sudoku board
 board = [
-    [7,8,0,4,0,0,1,2,0],
-    [6,0,0,0,7,5,0,0,9],
-    [0,0,0,6,0,1,0,7,8],
-    [0,0,7,0,4,0,2,6,0],
-    [0,0,1,0,5,0,9,3,0],
-    [9,0,4,0,6,0,0,0,5],
-    [0,7,0,3,0,0,0,1,2],
-    [1,2,0,0,0,7,4,0,0],
-    [0,4,9,2,0,6,0,0,7]
+    [7, 8, 0, 4, 0, 0, 1, 2, 0],
+    [6, 0, 0, 0, 7, 5, 0, 0, 9],
+    [0, 0, 0, 6, 0, 1, 0, 7, 8],
+    [0, 0, 7, 0, 4, 0, 2, 6, 0],
+    [0, 0, 1, 0, 5, 0, 9, 3, 0],
+    [9, 0, 4, 0, 6, 0, 0, 0, 5],
+    [0, 7, 0, 3, 0, 0, 0, 1, 2],
+    [1, 2, 0, 0, 0, 7, 4, 0, 0],
+    [0, 4, 9, 2, 0, 6, 0, 0, 7]
 ]
+
+# Fonts
+pygame.font.init()
+font_small = pygame.font.SysFont(None, 25)
+font_big = pygame.font.SysFont(None, 40)
+
+# Timer
+start_time = time.time()
+countdown_time = 300  # 5 minutes in seconds
+elapsed_time = 0
+
+# Cell dimensions
+CELL_SIZE = 60
+CELL_PADDING = 6
+
+# Calculate the board dimensions
+BOARD_SIZE = CELL_SIZE * 9 + CELL_PADDING * 10
+BOARD_POS_X = (WIDTH - BOARD_SIZE) // 2
+BOARD_POS_Y = (HEIGHT - BOARD_SIZE - font_big.get_height()) // 2
+
+# Selected cell position
+selected = (-1, -1)
+
+
 def solve(bo):
-    find=findempty(bo)
+    find = find_empty(bo)
     if not find:
         return True
     else:
         row, col = find
-    
-    for i in range(1,10):
-        if validcheck(bo,i,(row, col)):
-            bo[row][col]=i
+
+    for i in range(1, 10):
+        if valid_check(bo, i, (row, col)):
+            bo[row][col] = i
 
             if solve(bo):
                 return True
-            
-            bo[row][col]=0
-        
+
+            bo[row][col] = 0
+
     return False
-        
-def validcheck(bo,num,pos):
-    #row
+
+
+def valid_check(bo, num, pos):
+    # Row
     for i in range(len(bo[0])):
-        if bo[pos[0]][i] == num and pos[1]!= i:
+        if bo[pos[0]][i] == num and pos[1] != i:
             return False
-    #coloumn
+
+    # Column
     for i in range(len(bo)):
-        if bo[i][pos[1]] == num and pos[0]!= i :
+        if bo[i][pos[1]] == num and pos[0] != i:
             return False
-    #check box
+
+    # Check box
     box_x = pos[1] // 3
     box_y = pos[0] // 3
-    for i in range(box_y*3, box_y*3 + 3):
-        for j in range(box_x * 3, box_x*3 + 3):
-            if bo[i][j] == num and (i,j) != pos:
+    for i in range(box_y * 3, box_y * 3 + 3):
+        for j in range(box_x * 3, box_x * 3 + 3):
+            if bo[i][j] == num and (i, j) != pos:
                 return False
 
     return True
 
 
-def printboard(bo):
-    #function to display the board in a readable format.
-    for i in range(len(bo)):
-        if i % 3 == 0 and i!= 0:
-            print("- - - - - - - - - - - ")
-        for j in range(len(bo[0])):
-         if j%3 == 0 and j!=0:
-                print('|',end=" ")
-         if j==8:
-                    print(bo[i][j])
-         else:
-             print(str(bo[i][j]),end=" ")                   
+def draw_grid():
+    for i in range(10):
+        if i % 3 == 0:
+            pygame.draw.line(screen, BLACK, (BOARD_POS_X, BOARD_POS_Y + i * (CELL_SIZE + CELL_PADDING)),
+                             (BOARD_POS_X + BOARD_SIZE, BOARD_POS_Y + i * (CELL_SIZE + CELL_PADDING)), 3)
+            pygame.draw.line(screen, BLACK, (BOARD_POS_X + i * (CELL_SIZE + CELL_PADDING), BOARD_POS_Y),
+                             (BOARD_POS_X + i * (CELL_SIZE + CELL_PADDING), BOARD_POS_Y + BOARD_SIZE), 3)
+        else:
+            pygame.draw.line(screen, GRAY, (BOARD_POS_X, BOARD_POS_Y + i * (CELL_SIZE + CELL_PADDING)),
+                             (BOARD_POS_X + BOARD_SIZE, BOARD_POS_Y + i * (CELL_SIZE + CELL_PADDING)), 1)
+            pygame.draw.line(screen, GRAY, (BOARD_POS_X + i * (CELL_SIZE + CELL_PADDING), BOARD_POS_Y),
+                             (BOARD_POS_X + i * (CELL_SIZE + CELL_PADDING), BOARD_POS_Y + BOARD_SIZE), 1)
 
-def findempty(bo):
+
+def draw_numbers():
+    for i in range(9):
+        for j in range(9):
+            num = str(board[i][j])
+            if num != '0':
+                pos_x = BOARD_POS_X + j * (CELL_SIZE + CELL_PADDING) + CELL_SIZE // 2
+                pos_y = BOARD_POS_Y + i * (CELL_SIZE + CELL_PADDING) + CELL_SIZE // 2
+                text_surface = font_big.render(num, True, BLACK)
+                text_rect = text_surface.get_rect(center=(pos_x, pos_y))
+                screen.blit(text_surface, text_rect)
+
+
+def draw_selection():
+    if selected != (-1, -1):
+        pos_x = BOARD_POS_X + selected[1] * (CELL_SIZE + CELL_PADDING)
+        pos_y = BOARD_POS_Y + selected[0] * (CELL_SIZE + CELL_PADDING)
+        pygame.draw.rect(screen, BLUE, (pos_x, pos_y, CELL_SIZE, CELL_SIZE), 3)
+
+
+def draw_timer():
+    global elapsed_time
+    elapsed_time = int(time.time() - start_time)
+    remaining_time = countdown_time - elapsed_time
+    if remaining_time <= 0:
+        remaining_time = 0
+
+    minutes = remaining_time // 60
+    seconds = remaining_time % 60
+    timer_text = f"Time Left: {minutes:02d}:{seconds:02d}"
+    timer_surface = font_small.render(timer_text, True, BLACK)
+    timer_rect = timer_surface.get_rect(center=(WIDTH // 2, BOARD_POS_Y + BOARD_SIZE + font_big.get_height() // 2))
+    screen.blit(timer_surface, timer_rect)
+
+
+def find_empty(bo):
     for i in range(len(bo)):
         for j in range(len(bo[0])):
-            if bo[i][j]== 0:
-               return (i,j)
-           
+            if bo[i][j] == 0:
+                return (i, j)
+
     return None
 
-printboard(board)
-print("______________________________________----")
-solve(board)
-printboard(board)
+
+def solve_puzzle():
+    solve(board)
+
+
+# Main loop
+running = True
+while running:
+    clock.tick(FPS)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                x, y = pygame.mouse.get_pos()
+                if BOARD_POS_X <= x <= BOARD_POS_X + BOARD_SIZE and BOARD_POS_Y <= y <= BOARD_POS_Y + BOARD_SIZE:
+                    row = (y - BOARD_POS_Y) // (CELL_SIZE + CELL_PADDING)
+                    col = (x - BOARD_POS_X) // (CELL_SIZE + CELL_PADDING)
+                    selected = (row, col)
+                else:
+                    selected = (-1, -1)
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                solve_puzzle()
+            if selected != (-1, -1) and board[selected[0]][selected[1]] == 0:
+                if event.unicode.isnumeric():
+                    board[selected[0]][selected[1]] = int(event.unicode)
+                elif event.key == pygame.K_BACKSPACE:
+                    board[selected[0]][selected[1]] = 0
+
+    screen.fill(WHITE)
+
+    draw_grid()
+    draw_numbers()
+    draw_selection()
+    draw_timer()
+
+    pygame.display.flip()
+
+    if elapsed_time >= countdown_time:
+        pygame.time.wait(1000)  # Wait for 1 second before quitting
+        running = False
+
+pygame.quit()
