@@ -6,11 +6,12 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
 BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 
 # Set up the display
 pygame.init()
 WIDTH = 540
-HEIGHT = 600
+HEIGHT = 640
 FPS = 60
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Sudoku Solver")
@@ -41,15 +42,23 @@ elapsed_time = 0
 
 # Cell dimensions
 CELL_SIZE = 60
-CELL_PADDING = 6
+CELL_PADDING = 10
 
 # Calculate the board dimensions
-BOARD_SIZE = CELL_SIZE * 9 + CELL_PADDING * 10
+BOARD_SIZE = CELL_SIZE * 9 + CELL_PADDING * 9
 BOARD_POS_X = (WIDTH - BOARD_SIZE) // 2
-BOARD_POS_Y = (HEIGHT - BOARD_SIZE - font_big.get_height()) // 2
+BOARD_POS_Y = (HEIGHT - BOARD_SIZE - font_big.get_height() - font_small.get_height()) // 2
 
 # Selected cell position
 selected = (-1, -1)
+
+# Solve board flag
+solve_board = False
+
+# User input mode
+input_mode = False
+input_counter = 0
+input_original = [[0] * 9 for _ in range(9)]
 
 
 def solve(bo):
@@ -121,8 +130,8 @@ def draw_numbers():
 
 def draw_selection():
     if selected != (-1, -1):
-        pos_x = BOARD_POS_X + selected[1] * (CELL_SIZE + CELL_PADDING)
-        pos_y = BOARD_POS_Y + selected[0] * (CELL_SIZE + CELL_PADDING)
+        pos_x = BOARD_POS_X + selected[1] * (CELL_SIZE + CELL_PADDING) + CELL_PADDING
+        pos_y = BOARD_POS_Y + selected[0] * (CELL_SIZE + CELL_PADDING) + CELL_PADDING
         pygame.draw.rect(screen, BLUE, (pos_x, pos_y, CELL_SIZE, CELL_SIZE), 3)
 
 
@@ -137,7 +146,7 @@ def draw_timer():
     seconds = remaining_time % 60
     timer_text = f"Time Left: {minutes:02d}:{seconds:02d}"
     timer_surface = font_small.render(timer_text, True, BLACK)
-    timer_rect = timer_surface.get_rect(center=(WIDTH // 2, BOARD_POS_Y + BOARD_SIZE + font_big.get_height() // 2))
+    timer_rect = timer_surface.get_rect(center=(WIDTH // 2, BOARD_POS_Y - font_small.get_height() // 2))
     screen.blit(timer_surface, timer_rect)
 
 
@@ -152,6 +161,26 @@ def find_empty(bo):
 
 def solve_puzzle():
     solve(board)
+
+
+def reset_input():
+    global input_counter
+    for i in range(9):
+        for j in range(9):
+            if input_original[i][j] != 0:
+                board[i][j] = input_original[i][j]
+            else:
+                board[i][j] = 0
+    input_counter += 1
+
+
+def check_solution():
+    global input_counter
+    if solve(board):
+        input_counter = 3  # Set input_counter to 3 to prevent further input attempts
+        start_time -= elapsed_time  # Set start_time to simulate time reaching zero
+    else:
+        reset_input()
 
 
 # Main loop
@@ -176,11 +205,20 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 solve_puzzle()
-            if selected != (-1, -1) and board[selected[0]][selected[1]] == 0:
-                if event.unicode.isnumeric():
-                    board[selected[0]][selected[1]] = int(event.unicode)
-                elif event.key == pygame.K_BACKSPACE:
-                    board[selected[0]][selected[1]] = 0
+            if selected != (-1, -1):
+                if not input_mode and board[selected[0]][selected[1]] == 0:
+                    input_mode = True
+                    input_counter = 0
+                    for i in range(9):
+                        input_original[i] = board[i].copy()
+                elif input_mode and input_counter < 3:
+                    if event.unicode.isnumeric():
+                        num = int(event.unicode)
+                        board[selected[0]][selected[1]] = num
+                    elif event.key == pygame.K_BACKSPACE:
+                        board[selected[0]][selected[1]] = 0
+                    elif event.key == pygame.K_RETURN:
+                        check_solution()
 
     screen.fill(WHITE)
 
@@ -189,9 +227,42 @@ while running:
     draw_selection()
     draw_timer()
 
+    if solve_board:
+        solve(board)
+        solve_board = False
+
+    # Solve Board Button
+    button_width = 200
+    button_height = 50
+    button_x = (WIDTH - button_width) // 2
+    button_y = HEIGHT - button_height - 20
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    pygame.draw.rect(screen, GRAY, button_rect)
+    solve_text = font_small.render("Solve Board", True, BLACK)
+    solve_text_rect = solve_text.get_rect(center=button_rect.center)
+    screen.blit(solve_text, solve_text_rect)
+
+    # Check if Solve Board Button is clicked
+    mouse_pos = pygame.mouse.get_pos()
+    if button_rect.collidepoint(mouse_pos):
+        pygame.draw.rect(screen, BLUE, button_rect, 3)
+        if pygame.mouse.get_pressed()[0]:  # Left mouse button
+            solve_board = True
+    else:
+        pygame.draw.rect(screen, BLACK, button_rect, 3)
+
+    # User Input Mode Indicator
+    if input_mode:
+        if input_counter < 3:
+            mode_text = font_small.render("User Input Mode (Tries Left: " + str(3 - input_counter) + ")", True, GREEN)
+        else:
+            mode_text = font_small.render("User Input Mode (Tries Left: 0)", True, BLACK)
+        mode_text_rect = mode_text.get_rect(center=(WIDTH // 2, BOARD_POS_Y - font_small.get_height() // 2))
+        screen.blit(mode_text, mode_text_rect)
+
     pygame.display.flip()
 
-    if elapsed_time >= countdown_time:
+    if elapsed_time >= countdown_time or input_counter == 3:
         pygame.time.wait(1000)  # Wait for 1 second before quitting
         running = False
 
