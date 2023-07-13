@@ -1,5 +1,6 @@
 import pygame
 import time
+import random
 
 # Colors
 WHITE = (255, 255, 255)
@@ -16,19 +17,6 @@ FPS = 60
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Sudoku Solver")
 clock = pygame.time.Clock()
-
-# Sudoku board
-board = [
-    [7, 8, 0, 4, 0, 0, 1, 2, 0],
-    [6, 0, 0, 0, 7, 5, 0, 0, 9],
-    [0, 0, 0, 6, 0, 1, 0, 7, 8],
-    [0, 0, 7, 0, 4, 0, 2, 6, 0],
-    [0, 0, 1, 0, 5, 0, 9, 3, 0],
-    [9, 0, 4, 0, 6, 0, 0, 0, 5],
-    [0, 7, 0, 3, 0, 0, 0, 1, 2],
-    [1, 2, 0, 0, 0, 7, 4, 0, 0],
-    [0, 4, 9, 2, 0, 6, 0, 0, 7]
-]
 
 # Fonts
 pygame.font.init()
@@ -59,6 +47,23 @@ solve_board = False
 input_mode = False
 input_counter = 0
 input_original = [[0] * 9 for _ in range(9)]
+
+
+def generate_board():
+    # Initialize an empty board
+    board = [[0] * 9 for _ in range(9)]
+
+    # Fill the board using backtracking algorithm
+    solve(board)
+
+    # Remove random cells to create the puzzle
+    empty_cells = random.sample(range(81), 50)  # Adjust the number of empty cells as desired
+    for cell in empty_cells:
+        row = cell // 9
+        col = cell % 9
+        board[row][col] = 0
+
+    return board
 
 
 def solve(bo):
@@ -116,7 +121,7 @@ def draw_grid():
                              (BOARD_POS_X + i * (CELL_SIZE + CELL_PADDING), BOARD_POS_Y + BOARD_SIZE), 1)
 
 
-def draw_numbers():
+def draw_numbers(board):
     for i in range(9):
         for j in range(9):
             num = str(board[i][j])
@@ -160,7 +165,9 @@ def find_empty(bo):
 
 
 def solve_puzzle():
-    solve(board)
+    global input_mode, input_counter
+    input_mode = False
+    input_counter = 0
 
 
 def reset_input():
@@ -176,12 +183,14 @@ def reset_input():
 
 def check_solution():
     global input_counter
-    if solve(board):
-        input_counter = 3  # Set input_counter to 3 to prevent further input attempts
-        start_time -= elapsed_time  # Set start_time to simulate time reaching zero
+    if input_counter == 3:
+        solve(board)
     else:
         reset_input()
 
+
+# Generate a random board
+board = generate_board()
 
 # Main loop
 running = True
@@ -223,7 +232,7 @@ while running:
     screen.fill(WHITE)
 
     draw_grid()
-    draw_numbers()
+    draw_numbers(board)
     draw_selection()
     draw_timer()
 
