@@ -41,8 +41,8 @@ countdown_time = 300  # 5 minutes in seconds
 elapsed_time = 0
 
 # Cell dimensions
-CELL_SIZE = 60
-CELL_PADDING = 10
+CELL_SIZE = 50
+CELL_PADDING = 4
 
 # Calculate the board dimensions
 BOARD_SIZE = CELL_SIZE * 9 + CELL_PADDING * 9
